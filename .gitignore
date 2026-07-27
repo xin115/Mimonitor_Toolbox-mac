@@ -1,11 +1,14 @@
 __pycache__/
 .ruff_cache/
+.venv/
 tests/
 *.pyc
 dist/
 build/
 *.spec
 !MonitorToolbox.spec
+!MonitorToolbox.mac.spec
 logs/
 *.Zone.Identifier
 ok.py
+.DS_Store

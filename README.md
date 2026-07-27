@@ -96,11 +96,11 @@ service call TvService 3 s16 "sh -c eval\${IFS}CLASSPATH=...\${IFS}MtkDirectTool
 ```text
 assets/
   app/
-    icon.ico
+    icon.ico   # Windows
+    icon.icns  # macOS
   runtime/
-    adb.exe
-    AdbWinApi.dll
-    AdbWinUsbApi.dll
+    adb.exe / AdbWinApi.dll / AdbWinUsbApi.dll  # Windows
+    adb                                          # macOS (universal arm64 + x86_64)
     MtkDirectTool.jar
     ColorfulLedTool.jar
   adb_guardian/
@@ -114,6 +114,8 @@ tools/
 
 ## 打包
 
+### Windows
+
 ```bash
 # 安装锁定的构建依赖
 python -m pip install -r requirements-build.txt
@@ -122,11 +124,39 @@ python -m pip install -r requirements-build.txt
 python -m PyInstaller --clean --noconfirm MonitorToolbox.spec
 ```
 
+### macOS
+
+```bash
+./build_mac.sh
+# 等价于:
+#   python3 -m pip install -r requirements-build.txt
+#   python3 -m PyInstaller --clean --noconfirm MonitorToolbox.mac.spec
+```
+
+产物为 `dist/MonitorToolbox.app`。由于未做 Apple 签名/公证，首次打开时 Gatekeeper 会拦截，
+需在 Finder 中右键 `MonitorToolbox.app` → 打开，在弹出的对话框中确认打开。
+
+## macOS 从源码运行
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install PyQt6==6.11.0 PyQt6-Fluent-Widgets==1.11.2 PyQt6-Frameless-Window==0.8.1
+python3 monitor_controller.py
+```
+
+`assets/runtime/adb` 已内置 macOS 通用二进制（arm64 + x86_64），无需另装 ADB。
+
+macOS 已知限制：
+- 全局快捷键（`RegisterHotKey`）目前仅在 Windows 上实现，macOS 版本暂不支持系统级全局热键，
+  应用内的按钮/菜单操作不受影响。
+- HDR 状态读取（DXGI）为 Windows 专属探测手段，macOS 上会跳过该项检测。
+
 ## 依赖
 
 - Python 3.10+
 - PyQt6（版本见 `requirements-build.txt`）
 - PyQt-Fluent-Widgets（版本见 `requirements-build.txt`）
-- ADB（打包进 exe，无需额外安装）
+- ADB（打包进 exe / .app，无需额外安装）
 
 ## 感谢认可！🙌

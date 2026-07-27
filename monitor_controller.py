@@ -10,7 +10,7 @@ import ctypes
 import tempfile
 import json
 
-from PyQt6.QtCore import Qt, QSize, pyqtSignal, QTimer, QEasingCurve, QPropertyAnimation
+from PyQt6.QtCore import Qt, QSize, QRect, pyqtSignal, QTimer, QEasingCurve, QPropertyAnimation
 from PyQt6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor, QPen
 from PyQt6.QtNetwork import QLocalServer, QLocalSocket
 from PyQt6.QtWidgets import (
@@ -290,13 +290,18 @@ def get_app_base_dir():
     return os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
 
 def bundled_resource_path(*parts):
+    candidate_dirs = []
     if hasattr(sys, "_MEIPASS"):
-        p = os.path.join(sys._MEIPASS, *parts)
+        candidate_dirs.append(sys._MEIPASS)
+    candidate_dirs.append(get_app_base_dir())
+    if sys.platform == "darwin" and getattr(sys, "frozen", False):
+        # PyInstaller's macOS BUNDLE step relocates non-dylib binaries/data
+        # (adb, .jar, .apk) from Contents/MacOS into Contents/Resources.
+        candidate_dirs.append(os.path.join(os.path.dirname(get_app_base_dir()), "Resources"))
+    for base in candidate_dirs:
+        p = os.path.join(base, *parts)
         if os.path.exists(p):
             return p
-    p = os.path.join(get_app_base_dir(), *parts)
-    if os.path.exists(p):
-        return p
     return None
 
 def ensure_persistent_adb_runtime(adb_path):
@@ -1157,8 +1162,18 @@ class App(FluentWindow):
     adb_action_finished = pyqtSignal(object, bool, str)
     adb_server_event = pyqtSignal(str, str)
 
+    def systemTitleBarRect(self, size: QSize) -> QRect:
+        # qfluentwidgets 的 FluentWindow 默认把红绿灯锚定在右侧，这里改回 macOS 标准的左上角
+        return QRect(0, 0 if self.isFullScreen() else 8, 75, size.height())
+
     def __init__(self):
         super().__init__()
+        if sys.platform == "darwin":
+            # 为左上角原生红黄绿按钮预留空间，避免图标/标题被遮挡
+            self.titleBar.hBoxLayout.insertSpacing(0, 70)
+            # 导航栏的菜单/返回按钮也在左上角，同样需要让开，否则会和红黄绿按钮重叠
+            self.navigationInterface.panel.topLayout.insertSpacing(0, 40)
+            self._updateSystemButtonRect()
         QApplication.setQuitOnLastWindowClosed(False)
         self.adb = Adb()
         self.mode_btns = {}
@@ -2484,10 +2499,14 @@ class App(FluentWindow):
             self._remove_autostart()
             self.log("已取消开机自启动")
 
+    MACOS_LAUNCH_AGENT_LABEL = "com.mimonitor.toolbox"
+
     def _get_autostart_path(self):
         if sys.platform == "win32":
             startup = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup")
             return os.path.join(startup, "RedmiToolbox.bat")
+        elif sys.platform == "darwin":
+            return os.path.expanduser(f"~/Library/LaunchAgents/{self.MACOS_LAUNCH_AGENT_LABEL}.plist")
         else:
             return os.path.expanduser("~/.config/autostart/mitvcontroller.desktop")
 
@@ -2504,6 +2523,28 @@ class App(FluentWindow):
             if sys.platform == "win32":
                 with open(path, "w") as f:
                     f.write(f'start /min "" "{exe}" --minimized\n')
+            elif sys.platform == "darwin":
+                if getattr(sys, "frozen", False):
+                    args = [exe, "--minimized"]
+                else:
+                    args = [sys.executable, exe, "--minimized"]
+                args_xml = "".join(f"        <string>{a}</string>\n" for a in args)
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(
+                        '<?xml version="1.0" encoding="UTF-8"?>\n'
+                        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+                        '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+                        '<plist version="1.0">\n'
+                        "<dict>\n"
+                        f"    <key>Label</key>\n    <string>{self.MACOS_LAUNCH_AGENT_LABEL}</string>\n"
+                        "    <key>ProgramArguments</key>\n    <array>\n"
+                        f"{args_xml}"
+                        "    </array>\n"
+                        "    <key>RunAtLoad</key>\n    <true/>\n"
+                        "</dict>\n"
+                        "</plist>\n"
+                    )
+                subprocess.run(["launchctl", "load", "-w", path], capture_output=True)
             else:
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(f"[Desktop Entry]\nType=Application\nName=RedmiToolbox\nExec=python3 {exe} --minimized\nX-GNOME-Autostart-enabled=true\n")
@@ -2514,6 +2555,8 @@ class App(FluentWindow):
     def _remove_autostart(self):
         path = self._get_autostart_path()
         try:
+            if sys.platform == "darwin" and os.path.exists(path):
+                subprocess.run(["launchctl", "unload", "-w", path], capture_output=True)
             if os.path.exists(path):
                 os.remove(path)
         except Exception as e:

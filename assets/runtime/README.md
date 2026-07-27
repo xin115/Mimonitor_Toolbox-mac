@@ -3,8 +3,9 @@
 Files in this directory are bundled into the PyInstaller executable and used by
 MonitorToolbox at runtime.
 
-- `adb.exe`: ADB client used by the desktop app.
+- `adb.exe`: ADB client used by the desktop app on Windows.
 - `AdbWinApi.dll` and `AdbWinUsbApi.dll`: Windows ADB runtime libraries.
+- `adb`: ADB client used by the desktop app on macOS (universal binary, arm64 + x86_64).
 - `MtkDirectTool.jar`: Helper jar pushed to the display for MTK JNI calls.
 - `ColorfulLedTool.jar`: Helper jar used to call MiTV PM2 colorful LED HIDL.
 
