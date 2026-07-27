@@ -18,6 +18,11 @@ Redmi G Pro 27U 2026显示器 ADB 控制工具
 <img src="assets/Screensettings.png" width="500">
 <img src="assets/Gamesettings.png" width="500">
 
+### macOS
+
+<img src="assets/MacScreensettings.png" width="500">
+<img src="assets/MacGamesettings.png" width="500">
+
 ## 实现原理
 
 通过无线 ADB 连接到显示器内置的 Android 系统，利用 `settings` 命令和 MTK 平台 JNI 接口（`MtkDirectTool.jar`）直接读写硬件寄存器，实现对显示器各项参数的精确控制。
