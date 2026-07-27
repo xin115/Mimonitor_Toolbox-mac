@@ -1,4 +1,9 @@
-# Mimonitor Toolbox
+# Mimonitor Toolbox (macOS 版)
+
+> 本项目 Fork 自 [YiHooong/Mimonitor_Toolbox](https://github.com/YiHooong/Mimonitor_Toolbox)，
+> 在原项目基础上移植并适配了 macOS（自动启动、内置 adb、`.app` 打包、原生标题栏按钮等），
+> 让原本仅支持 Windows 的桌面工具也能在 Mac 上运行。核心功能、实现原理与创意均来自原项目，
+> 相关 credit 归原作者所有；如需 Windows 版本请前往原仓库获取。
 
 Redmi G Pro 27U 2026显示器 ADB 控制工具
 测试机器系统版本号：HyperOS 3.0.112.0  
