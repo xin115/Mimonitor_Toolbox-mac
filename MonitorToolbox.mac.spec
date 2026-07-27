@@ -56,6 +56,6 @@ app = BUNDLE(
     bundle_identifier="com.mimonitor.toolbox",
     info_plist={
         "NSHighResolutionCapable": True,
-        "CFBundleShortVersionString": "1.0.0",
+        "CFBundleShortVersionString": "2.5.5",
     },
 )
